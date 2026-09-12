@@ -1,0 +1,20 @@
+[debug] [2026-09-12T17:40:28.348Z] ----------------------------------------------------------------------
+[debug] [2026-09-12T17:40:28.353Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\maicr\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2026-09-12T17:40:28.353Z] CLI Version:   15.30.0
+[debug] [2026-09-12T17:40:28.354Z] Platform:      win32
+[debug] [2026-09-12T17:40:28.354Z] Node Version:  v24.14.0
+[debug] [2026-09-12T17:40:28.354Z] Detected Agent: unknown
+[debug] [2026-09-12T17:40:28.354Z] Time:          Sat Sep 12 2026 11:40:28 GMT-0600 (hora estándar central)
+[debug] [2026-09-12T17:40:28.355Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\maicr\OneDrive\Desktop\Bautizo\Invitacion
+
