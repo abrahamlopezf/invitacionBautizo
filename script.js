@@ -236,4 +236,197 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 
+    /* --- RSVP FIREBASE LOGIC --- */
+    
+    // 1. Initialize Firebase (Replace with your actual config details)
+    const firebaseConfig = {
+      projectId: "invbacatherine",
+      appId: "1:421006239065:web:720c3ff56046c48c461848",
+      databaseURL: "https://invbacatherine-default-rtdb.firebaseio.com",
+      storageBucket: "invbacatherine.firebasestorage.app",
+      apiKey: "AIzaSyCmDzOpq1y5_l0svS2SAnx9BABCH7g22hc",
+      authDomain: "invbacatherine.firebaseapp.com",
+      messagingSenderId: "421006239065"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // 2. Element Selectors
+    const openRsvpBtn = document.getElementById('openRsvpModalBtn');
+    const rsvpModal = document.getElementById('rsvpModal');
+    const closeRsvpBtn = document.getElementById('closeRsvpModalBtn');
+    
+    const limitModal = document.getElementById('limitModal');
+    const closeLimitBtn = document.getElementById('closeLimitModalBtn');
+
+    const searchBtn = document.getElementById('searchGuestBtn');
+    const guestNameInput = document.getElementById('guestName');
+    const detailsSection = document.getElementById('guestDetailsSection');
+    const consideredQtyInput = document.getElementById('consideredQty');
+    const confirmBtn = document.getElementById('confirmRsvpBtn');
+    const validationMsg = document.getElementById('validationMessage');
+    const successMsg = document.getElementById('rsvpSuccessMsg');
+    const rsvpForm = document.getElementById('rsvpForm');
+
+    let currentGuestId = null;
+    let maxAllowed = 0;
+
+    // Normalization Function: Uppercase and no accents
+    function normalizeName(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    }
+
+    // Open Modal
+    openRsvpBtn.addEventListener('click', () => {
+        rsvpModal.classList.add('active');
+    });
+
+    // Close Modals
+    closeRsvpBtn.addEventListener('click', () => {
+        rsvpModal.classList.remove('active');
+        // Reset form
+        setTimeout(() => {
+            guestNameInput.value = '';
+            detailsSection.style.display = 'none';
+            successMsg.style.display = 'none';
+            rsvpForm.style.display = 'block';
+            validationMsg.innerText = '';
+            document.querySelectorAll('.qty-controls input').forEach(input => input.value = 0);
+            currentGuestId = null;
+            maxAllowed = 0;
+        }, 400);
+    });
+
+    closeLimitBtn.addEventListener('click', () => {
+        limitModal.classList.remove('active');
+    });
+
+    // 3. Search Guest Logic
+    searchBtn.addEventListener('click', async () => {
+        const rawName = guestNameInput.value;
+        if (!rawName) {
+            alert('Por favor ingresa tu nombre.');
+            return;
+        }
+
+        searchBtn.innerText = 'Buscando...';
+        searchBtn.disabled = true;
+
+        const normalized = normalizeName(rawName);
+
+        try {
+            const querySnapshot = await db.collection('invitados')
+                .where('nombre', '==', normalized)
+                .get();
+
+            if (querySnapshot.empty) {
+                alert('No encontramos tu nombre en la lista. Asegúrate de escribir tu primer nombre y primer apellido como te registramos.');
+                searchBtn.innerText = 'Buscar';
+                searchBtn.disabled = false;
+                detailsSection.style.display = 'none';
+                return;
+            }
+
+            // Found Guest
+            const doc = querySnapshot.docs[0];
+            const data = doc.data();
+            
+            currentGuestId = doc.id;
+            maxAllowed = data.cantidad_considerada || 0;
+            
+            consideredQtyInput.value = maxAllowed;
+            
+            // Set existing values if already confirmed
+            document.getElementById('qtyWomen').value = data.mujeres || 0;
+            document.getElementById('qtyMen').value = data.hombres || 0;
+            document.getElementById('qtyChildren').value = data.ninos || 0;
+            
+            detailsSection.style.display = 'block';
+            confirmBtn.disabled = false;
+            validationMsg.innerText = '';
+
+        } catch (error) {
+            console.error("Error buscando invitado:", error);
+            alert("Hubo un error de conexión. Intenta de nuevo.");
+        } finally {
+            searchBtn.innerText = 'Buscar';
+            searchBtn.disabled = false;
+        }
+    });
+
+    // 4. Quantity Controls & Limits Logic
+    const qtyBtns = document.querySelectorAll('.qty-btn');
+    
+    function getTotalQty() {
+        const w = parseInt(document.getElementById('qtyWomen').value) || 0;
+        const m = parseInt(document.getElementById('qtyMen').value) || 0;
+        const c = parseInt(document.getElementById('qtyChildren').value) || 0;
+        return w + m + c;
+    }
+
+    qtyBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const isPlus = e.target.classList.contains('plus');
+            const targetId = e.target.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            let val = parseInt(input.value) || 0;
+
+            if (isPlus) {
+                const total = getTotalQty();
+                if (total >= maxAllowed) {
+                    // Show Limit Modal
+                    limitModal.classList.add('active');
+                    return;
+                }
+                input.value = val + 1;
+            } else {
+                if (val > 0) {
+                    input.value = val - 1;
+                }
+            }
+        });
+    });
+
+    // 5. Confirm Logic
+    confirmBtn.addEventListener('click', async () => {
+        if (!currentGuestId) return;
+
+        const w = parseInt(document.getElementById('qtyWomen').value) || 0;
+        const m = parseInt(document.getElementById('qtyMen').value) || 0;
+        const c = parseInt(document.getElementById('qtyChildren').value) || 0;
+        const total = w + m + c;
+
+        if (total > maxAllowed) {
+            limitModal.classList.add('active');
+            return;
+        }
+
+        confirmBtn.innerText = 'Guardando...';
+        confirmBtn.disabled = true;
+
+        try {
+            await db.collection('invitados').doc(currentGuestId).update({
+                estado: 'Confirmado',
+                mujeres: w,
+                hombres: m,
+                ninos: c,
+                total_asistiran: total,
+                fecha_confirmacion: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Show Success
+            rsvpForm.style.display = 'none';
+            successMsg.style.display = 'block';
+
+        } catch (error) {
+            console.error("Error guardando confirmación:", error);
+            alert("Error al guardar. Intenta de nuevo.");
+            confirmBtn.innerText = 'Confirmar';
+            confirmBtn.disabled = false;
+        }
+    });
+
 });

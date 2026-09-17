@@ -205,17 +205,96 @@
                 </div>
 
                 <div class="rsvp-section section">
-                    <a href="https://wa.me/521XXXXXXXXXX?text=¡Hola!%20Confirmo%20mi%20asistencia%20al%20bautizo%20de%20Catherine.%20Somos%20[%202%20]%20personas." target="_blank" class="rsvp-btn">
+                    <button class="rsvp-btn" id="openRsvpModalBtn">
                         <span>Confirmar Asistencia</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </a>
+                    </button>
                 </div>
                 
             </div>
         </div>
     </div>
 
+    <!-- RSVP Modal -->
+    <div id="rsvpModal" class="modal-overlay">
+        <div class="modal-content">
+            <button id="closeRsvpModalBtn" class="close-btn">&times;</button>
+            <h2 class="modal-title">Confirmación de Asistencia</h2>
+            <p class="modal-subtitle">Esta sección es para control de la fiesta. Queremos limitar el número de invitados ya que los espacios están planeados únicamente para los que contemplamos.</p>
+            
+            <div class="rsvp-form" id="rsvpForm">
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label for="guestName">Nombre (Primer nombre y primer apellido)</label>
+                        <input type="text" id="guestName" placeholder="Ej. Abraham Lopez" autocomplete="off">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>&nbsp;</label>
+                        <button type="button" id="searchGuestBtn" class="primary-btn">Buscar</button>
+                    </div>
+                </div>
+
+                <div id="guestDetailsSection" style="display: none;">
+                    <div class="form-group considered-qty-group">
+                        <label>Cantidad Considerada</label>
+                        <input type="text" id="consideredQty" readonly class="readonly-input">
+                    </div>
+
+                    <p class="validation-message" id="validationMessage"></p>
+
+                    <div class="qty-selectors">
+                        <div class="qty-group">
+                            <label>Mujeres</label>
+                            <div class="qty-controls">
+                                <button type="button" class="qty-btn minus" data-target="qtyWomen">-</button>
+                                <input type="number" id="qtyWomen" value="0" readonly>
+                                <button type="button" class="qty-btn plus" data-target="qtyWomen">+</button>
+                            </div>
+                        </div>
+                        <div class="qty-group">
+                            <label>Hombres</label>
+                            <div class="qty-controls">
+                                <button type="button" class="qty-btn minus" data-target="qtyMen">-</button>
+                                <input type="number" id="qtyMen" value="0" readonly>
+                                <button type="button" class="qty-btn plus" data-target="qtyMen">+</button>
+                            </div>
+                        </div>
+                        <div class="qty-group">
+                            <label>Niños</label>
+                            <div class="qty-controls">
+                                <button type="button" class="qty-btn minus" data-target="qtyChildren">-</button>
+                                <input type="number" id="qtyChildren" value="0" readonly>
+                                <button type="button" class="qty-btn plus" data-target="qtyChildren">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="confirmRsvpBtn" class="primary-btn submit-btn" disabled>Confirmar</button>
+                </div>
+            </div>
+            
+            <!-- Success Message -->
+            <div id="rsvpSuccessMsg" style="display: none; text-align: center; padding: 20px 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#F8BBD0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:15px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <h3 style="font-family: 'Cinzel', serif; color: #1a1a1a;">¡Asistencia Confirmada!</h3>
+                <p style="font-size: 0.95rem; margin-top: 10px;">Muchas gracias, tus datos han sido guardados.</p>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Error/Limit Modal -->
+    <div id="limitModal" class="modal-overlay" style="z-index: 10001;">
+        <div class="modal-content limit-modal-content">
+            <h3 style="font-family: 'Cinzel', serif; color: #E91E63; margin-bottom: 15px; font-size:1.4rem;">Límite Alcanzado</h3>
+            <p>La suma total de pases no puede exceder tu cantidad considerada. Por favor ajusta los números.</p>
+            <button type="button" id="closeLimitModalBtn" class="primary-btn" style="margin-top: 20px;">Entendido</button>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
