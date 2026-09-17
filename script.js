@@ -421,6 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
             rsvpForm.style.display = 'none';
             successMsg.style.display = 'block';
 
+            // Auto-close modal after 10 seconds
+            setTimeout(() => {
+                if (rsvpModal.classList.contains('active')) {
+                    closeRsvpBtn.click();
+                }
+            }, 10000);
+
         } catch (error) {
             console.error("Error guardando confirmación:", error);
             alert("Error al guardar. Intenta de nuevo.");
