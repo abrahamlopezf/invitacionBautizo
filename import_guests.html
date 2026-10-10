@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Importador de Invitados</title>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #status { color: blue; }
+        #log { white-space: pre-wrap; font-family: monospace; background: #eee; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Importador Automático a Firebase</h2>
+    <p id="status">Iniciando...</p>
+    <div id="log"></div>
+
+    <script>
+        const firebaseConfig = {
+          projectId: "invbacatherine",
+          appId: "1:421006239065:web:720c3ff56046c48c461848",
+          databaseURL: "https://invbacatherine-default-rtdb.firebaseio.com",
+          storageBucket: "invbacatherine.firebasestorage.app",
+          apiKey: "AIzaSyCmDzOpq1y5_l0svS2SAnx9BABCH7g22hc",
+          authDomain: "invbacatherine.firebaseapp.com",
+          messagingSenderId: "421006239065"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const guests = [
+            {"name": "Angelica Hernandez", "qty": 3},
+            {"name": "Celia López", "qty": 4},
+            {"name": "Andrea Callejas", "qty": 3},
+            {"name": "Raquel Mendoza", "qty": 5},
+            {"name": "Jesus Ulaje", "qty": 2},
+            {"name": "Alberto Velazquez", "qty": 3},
+            {"name": "Lourdes Paz", "qty": 2},
+            {"name": "Javier Sanchez", "qty": 1},
+            {"name": "Beatriz Hernandez", "qty": 2},
+            {"name": "Mariana Guadarrama", "qty": 2},
+            {"name": "Carmen Amezquita", "qty": 3},
+            {"name": "Jesus Arteaga", "qty": 2},
+            {"name": "Laura Fuentes", "qty": 2},
+            {"name": "Daniel Salgado", "qty": 2},
+            {"name": "Nancy Suarez", "qty": 3},
+            {"name": "Leonardo Bocanegra", "qty": 1},
+            {"name": "Daniel War", "qty": 1},
+            {"name": "Paola Arteaga", "qty": 1},
+            {"name": "Guillermo Vera", "qty": 4},
+            {"name": "Erendira Najera", "qty": 3},
+            {"name": "Marisol Mendoza", "qty": 4},
+            {"name": "Fernando Puente", "qty": 4},
+            {"name": "Mirelly Soriano", "qty": 1},
+            {"name": "Norma Letipichia", "qty": 3},
+            {"name": "SANDRA LOPEZ", "qty": 6},
+            {"name": "ADRIANA LOPEZ", "qty": 4},
+            {"name": "NATALIA AGUILAR", "qty": 2},
+            {"name": "ROSA LOPEZ", "qty": 2},
+            {"name": "LOURDES RANGEL", "qty": 6},
+            {"name": "FRANCISCO MARTINEZ", "qty": 2},
+            {"name": "JUAN", "qty": 2},
+            {"name": "DANIEL CABRERA", "qty": 2},
+            {"name": "MODESTO HERNANDEZ", "qty": 2},
+            {"name": "LIZ PEÑA", "qty": 3},
+            {"name": "AMSI RANGEL", "qty": 2},
+            {"name": "CARMEN GARCIA", "qty": 3},
+            {"name": "DELIA RANGEL", "qty": 5},
+            {"name": "RICARDO LOPEZ", "qty": 4},
+            {"name": "GRISSEL LOPEZ", "qty": 5},
+            {"name": "LEONEL LOPEZ", "qty": 1},
+            {"name": "INES MENDOZA", "qty": 5},
+            {"name": "LUIS MENDOZA", "qty": 3},
+            {"name": "TOMAS MENDOZA", "qty": 5},
+            {"name": "MARIA LOPEZ", "qty": 3},
+            {"name": "MARIO LOPEZ", "qty": 2},
+            {"name": "JIMMY LOPEZ", "qty": 4},
+            {"name": "HORTENCIA LOPEZ", "qty": 2},
+            {"name": "RAMON BLAS", "qty": 6},
+            {"name": "Paola Villafuerte", "qty": 1},
+            {"name": "Alexis Vilchis", "qty": 1},
+            {"name": "Enrique Chávez", "qty": 1},
+            {"name": "Yazmin Flores", "qty": 2},
+            {"name": "Tommy González", "qty": 2},
+            {"name": "Erandy Hernández", "qty": 3},
+            {"name": "Rogelio Hernández", "qty": 1},
+            {"name": "BIANI VARELA", "qty": 1}
+        ];
+
+        function normalizeName(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+        }
+
+        async function uploadData() {
+            const logDiv = document.getElementById('log');
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "Sincronizando " + guests.length + " invitados con Firebase de forma segura...";
+
+            try {
+                // 1. Obtener la lista actual de Firebase
+                const snapshot = await db.collection('invitados').get();
+                const dbGuests = {};
+                snapshot.forEach(doc => {
+                    dbGuests[doc.data().nombre] = { id: doc.id, ...doc.data() };
+                });
+
+                // 2. Crear un mapa con la nueva lista
+                const newGuestsMap = {};
+                guests.forEach(g => {
+                    newGuestsMap[normalizeName(g.name)] = g.qty;
+                });
+
+                // 3. Procesar eliminaciones (están en DB pero no en la nueva lista)
+                for (const dbName in dbGuests) {
+                    if (!(dbName in newGuestsMap)) {
+                        const docId = dbGuests[dbName].id;
+                        await db.collection('invitados').doc(docId).delete();
+                        logDiv.innerText += `🗑️ Eliminado: ${dbName} (Ya no está en la lista)\n`;
+                    }
+                }
+
+                // 4. Procesar agregados y actualizaciones
+                for (const newName in newGuestsMap) {
+                    const newQty = newGuestsMap[newName];
+                    const existingGuest = dbGuests[newName];
+                    
+                    if (existingGuest) {
+                        // Ya existe, actualizar si la cantidad cambió (sin borrar su confirmación)
+                        if (existingGuest.cantidad_considerada !== newQty) {
+                            await db.collection('invitados').doc(existingGuest.id).update({
+                                cantidad_considerada: newQty
+                            });
+                            logDiv.innerText += `🔄 Actualizado: ${newName} (Nuevos pases: ${newQty})\n`;
+                        } else {
+                            logDiv.innerText += `✅ Intacto: ${newName} (Sin cambios)\n`;
+                        }
+                    } else {
+                        // Es nuevo, agregarlo
+                        await db.collection('invitados').add({
+                            nombre: newName,
+                            cantidad_considerada: newQty
+                        });
+                        logDiv.innerText += `✨ Agregado: ${newName} (Pases: ${newQty})\n`;
+                    }
+                }
+
+                statusDiv.innerText = "¡Sincronización terminada exitosamente! Ya puedes cerrar esta ventana.";
+                statusDiv.style.color = "green";
+            } catch (e) {
+                statusDiv.innerText = "Ocurrió un error. Revisa la consola.";
+                statusDiv.style.color = "red";
+                console.error(e);
+                logDiv.innerText += `\nERROR CRÍTICO: ${e.message}\n`;
+            }
+        }
+
+        window.onload = uploadData;
+    </script>
+</body>
+</html>
