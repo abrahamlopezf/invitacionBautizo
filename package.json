@@ -1,4 +1,9 @@
 {
+  "name": "invitacion-bautizo",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo \"Static site ready\""
+  },
   "dependencies": {
     "firebase": "^12.19.0"
   }
