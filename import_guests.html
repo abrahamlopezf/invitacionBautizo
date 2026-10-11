@@ -88,7 +88,16 @@
         ];
 
         function normalizeName(str) {
-            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+            if (!str) return "";
+            return str
+                .toUpperCase()
+                .trim()
+                .replace(/[ÁÀÄ]/g, "A")
+                .replace(/[ÉÈË]/g, "E")
+                .replace(/[ÍÌÏ]/g, "I")
+                .replace(/[ÓÒÖ]/g, "O")
+                .replace(/[ÚÙÜ]/g, "U")
+                .replace(/\s+/g, " ");
         }
 
         async function uploadData() {

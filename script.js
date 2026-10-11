@@ -274,9 +274,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGuestId = null;
     let maxAllowed = 0;
 
-    // Normalization Function: Uppercase and no accents
+    // Normalization Function: Uppercase, removes vowel accents but PRESERVES Ñ
     function normalizeName(str) {
-        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+        if (!str) return "";
+        return str
+            .toUpperCase()
+            .trim()
+            .replace(/[ÁÀÄ]/g, "A")
+            .replace(/[ÉÈË]/g, "E")
+            .replace(/[ÍÌÏ]/g, "I")
+            .replace(/[ÓÒÖ]/g, "O")
+            .replace(/[ÚÙÜ]/g, "U")
+            .replace(/\s+/g, " ");
     }
 
     // Open Modal
@@ -318,9 +327,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const normalized = normalizeName(rawName);
 
         try {
-            const querySnapshot = await db.collection('invitados')
+            let querySnapshot = await db.collection('invitados')
                 .where('nombre', '==', normalized)
                 .get();
+
+            // Búsqueda alternativa por si escriben con N o con Ñ (ej. Liz Pena vs Liz Peña)
+            if (querySnapshot.empty && normalized.includes('PENA')) {
+                const altQuery = await db.collection('invitados')
+                    .where('nombre', '==', normalized.replace('PENA', 'PEÑA'))
+                    .get();
+                if (!altQuery.empty) {
+                    querySnapshot = altQuery;
+                }
+            } else if (querySnapshot.empty && normalized.includes('PEÑA')) {
+                const altQuery = await db.collection('invitados')
+                    .where('nombre', '==', normalized.replace('PEÑA', 'PENA'))
+                    .get();
+                if (!altQuery.empty) {
+                    querySnapshot = altQuery;
+                }
+            }
 
             if (querySnapshot.empty) {
                 alert('No encontramos tu nombre en la lista. Asegúrate de escribir tu primer nombre y primer apellido como te registramos.');
