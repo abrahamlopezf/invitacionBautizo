@@ -348,6 +348,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Búsqueda alternativa si ingresa solo JUAN
+            if (querySnapshot.empty && normalized === 'JUAN') {
+                const altQuery = await db.collection('invitados')
+                    .where('nombre', '==', 'JUAN SANTILLAN')
+                    .get();
+                if (!altQuery.empty) {
+                    querySnapshot = altQuery;
+                }
+            }
+
             if (querySnapshot.empty) {
                 alert('No encontramos tu nombre en la lista. Asegúrate de escribir tu primer nombre y primer apellido como te registramos.');
                 searchBtn.innerText = 'Buscar';
