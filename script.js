@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendTelegramNotification(guestName, pasesMax, w, m, c, total) {
         try {
             const botToken = "8634708926:AAGOfHeqn7JEpZAfmoRLgWxTJ157YveHIKw";
-            const chatId = "5215477099";
+            const chatIds = ["5215477099", "6299608285"]; // Abraham & Liz
 
             // Obtener lista completa de confirmados para calcular totales y armar tabla
             const snapshot = await db.collection('invitados').get();
@@ -541,15 +541,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 `📋 <b>HISTORIAL DE RESPUESTAS:</b>\n` +
                 `<pre>${tableRows}</pre>`;
 
-            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: text,
-                    parse_mode: 'HTML'
-                })
-            }).catch(e => console.error("Error al enviar notificación a Telegram:", e));
+            chatIds.forEach(id => {
+                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: id,
+                        text: text,
+                        parse_mode: 'HTML'
+                    })
+                }).catch(e => console.error("Error al enviar notificación a Telegram:", e));
+            });
         } catch (err) {
             console.error("Error preparando notificación:", err);
         }

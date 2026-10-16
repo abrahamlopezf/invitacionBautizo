@@ -16,7 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const BOT_TOKEN = "8634708926:AAGOfHeqn7JEpZAfmoRLgWxTJ157YveHIKw";
-const AUTHORIZED_CHAT_ID = "5215477099"; // Abraham Lopez
+const AUTHORIZED_CHAT_IDS = ["5215477099", "6299608285"]; // Abraham Lopez & Liz Lopez
 
 let lastUpdateId = 0;
 
@@ -114,7 +114,7 @@ function processMessage(msg) {
   if (!msg || !msg.text) return;
   const chatId = String(msg.chat.id);
 
-  if (chatId !== AUTHORIZED_CHAT_ID) {
+  if (!AUTHORIZED_CHAT_IDS.includes(chatId)) {
     sendTelegramMessage(chatId, "🔒 Lo siento, este bot es privado para los organizadores del bautizo de Catherine.");
     return;
   }
