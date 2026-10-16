@@ -2,6 +2,7 @@
   "name": "invitacion-bautizo",
   "version": "1.0.0",
   "scripts": {
+    "start": "node bot_server.js",
     "build": "echo \"Static site ready\"",
     "bot": "node bot_server.js"
   },

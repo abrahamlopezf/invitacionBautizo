@@ -173,5 +173,15 @@ function pollUpdates() {
   });
 }
 
+// Servidor HTTP simple para mantener vivo el servicio en la nube (Render, Railway, etc.)
+const http = require('http');
+const PORT = process.env.PORT || 8080;
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end('🤖 Bot de Bautizo Catherine está activo 24/7.');
+}).listen(PORT, () => {
+  console.log(`🌐 Servidor HTTP activo en puerto ${PORT}`);
+});
+
 console.log("🤖 Bot de Telegram activo y escuchando preguntas...");
 pollUpdates();
