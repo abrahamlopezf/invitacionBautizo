@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /invitados/{guestId} {
+      // Permitir lectura para que los invitados busquen su nombre
+      allow read: if true;
+
+      // Permitir confirmación de asistencia (actualización segura)
+      // Valida que no se altere el nombre ni la cantidad asignada, y que no exceda el límite
+      allow update: if (
+        // Caso 1: Confirmación de RSVP por parte del invitado
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estado', 'hombres', 'mujeres', 'ninos', 'total_asistiran', 'fecha_confirmacion'
+        ])
+        && request.resource.data.nombre == resource.data.nombre
+        && request.resource.data.cantidad_considerada == resource.data.cantidad_considerada
+        && request.resource.data.hombres is number && request.resource.data.hombres >= 0
+        && request.resource.data.mujeres is number && request.resource.data.mujeres >= 0
+        && request.resource.data.ninos is number && request.resource.data.ninos >= 0
+        && request.resource.data.total_asistiran is number
+        && request.resource.data.total_asistiran == (request.resource.data.hombres + request.resource.data.mujeres + request.resource.data.ninos)
+        && request.resource.data.total_asistiran <= resource.data.cantidad_considerada
+        && request.resource.data.estado == 'Confirmado'
+      ) || (
+        // Caso 2: Gestión de invitados (modificar pases o nombre por admin)
+        request.resource.data.nombre is string
+        && request.resource.data.cantidad_considerada is number
+        && request.resource.data.cantidad_considerada > 0
+      );
+
+      // Permitir agregar nuevos invitados válidos
+      allow create: if request.resource.data.nombre is string
+                    && request.resource.data.cantidad_considerada is number
+                    && request.resource.data.cantidad_considerada > 0;
+
+      // Permitir eliminar en caso de sincronización de invitados
+      allow delete: if true;
+    }
+
+    // Por defecto, denegar cualquier otra colección no autorizada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
