@@ -272,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rsvpForm = document.getElementById('rsvpForm');
 
     let currentGuestId = null;
+    let currentGuestName = '';
     let maxAllowed = 0;
 
     // Normalization Function: Uppercase, removes vowel accents but PRESERVES Ñ
@@ -305,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             validationMsg.innerText = '';
             document.querySelectorAll('.qty-controls input').forEach(input => input.value = 0);
             currentGuestId = null;
+            currentGuestName = '';
             maxAllowed = 0;
         }, 400);
     });
@@ -371,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = doc.data();
             
             currentGuestId = doc.id;
+            currentGuestName = data.nombre || '';
             maxAllowed = data.cantidad_considerada || 0;
             
             consideredQtyInput.value = maxAllowed;
@@ -453,6 +456,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 fecha_confirmacion: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // Enviar notificación automática a Telegram
+            sendTelegramNotification(currentGuestName, maxAllowed, w, m, c, total);
+
             // Show Success
             rsvpForm.style.display = 'none';
             successMsg.style.display = 'block';
@@ -471,5 +477,82 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmBtn.disabled = false;
         }
     });
+
+    // 6. Notificación a Telegram con Historial y Totales
+    async function sendTelegramNotification(guestName, pasesMax, w, m, c, total) {
+        try {
+            const botToken = "8634708926:AAGOfHeqn7JEpZAfmoRLgWxTJ157YveHIKw";
+            const chatId = "5215477099";
+
+            // Obtener lista completa de confirmados para calcular totales y armar tabla
+            const snapshot = await db.collection('invitados').get();
+            let totalH = 0, totalM = 0, totalN = 0, totalA = 0;
+            const confirmados = [];
+
+            snapshot.forEach(docSnap => {
+                const d = docSnap.data();
+                if (d.nombre === 'LIZ PENA' && !d.estado) return;
+
+                const isCurrent = (docSnap.id === currentGuestId);
+                const hom = isCurrent ? m : (d.hombres || 0);
+                const muj = isCurrent ? w : (d.mujeres || 0);
+                const nin = isCurrent ? c : (d.ninos || 0);
+                const tot = isCurrent ? total : (d.total_asistiran !== undefined ? d.total_asistiran : (hom + muj + nin));
+                const st = isCurrent ? 'Confirmado' : d.estado;
+
+                if (st === 'Confirmado' || tot > 0 || (d.fecha_confirmacion && tot === 0)) {
+                    totalH += hom;
+                    totalM += muj;
+                    totalN += nin;
+                    totalA += tot;
+                    confirmados.push({
+                        nombre: d.nombre,
+                        pases: d.cantidad_considerada || 0,
+                        hombres: hom,
+                        mujeres: muj,
+                        ninos: nin,
+                        total: tot,
+                        noAsiste: (tot === 0)
+                    });
+                }
+            });
+
+            // Ordenar: primero los que tienen mayor número de asistentes y luego alfabético
+            confirmados.sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre));
+
+            const tableRows = confirmados.map(item => {
+                const namePadded = item.nombre.length > 17 ? item.nombre.substring(0, 16) + '…' : item.nombre.padEnd(17, ' ');
+                if (item.noAsiste) {
+                    return `${namePadded} [No asiste]`;
+                }
+                return `${namePadded} (${item.total}) [${item.hombres}H/${item.mujeres}M/${item.ninos}N]`;
+            }).join('\n');
+
+            const text = `🔔 <b>¡NUEVA CONFIRMACIÓN DE ASISTENCIA!</b>\n\n` +
+                `👤 <b>Invitado:</b> ${guestName}\n` +
+                `🎟️ <b>Pases considerados:</b> ${pasesMax}\n` +
+                `👥 <b>Asistirán:</b> ${total} persona(s)${total === 0 ? ' (Indicó que no asistirá)' : ''}\n` +
+                `👨 <b>Hombres:</b> ${m} | 👩 <b>Mujeres:</b> ${w} | 🧒 <b>Niños:</b> ${c}\n\n` +
+                `━━━━━━━━━━━━━━━━━━━\n` +
+                `📊 <b>TOTALES ACUMULADOS:</b>\n` +
+                `👥 <b>Total personas:</b> ${totalA}\n` +
+                `👨 <b>Hombres:</b> ${totalH} | 👩 <b>Mujeres:</b> ${totalM} | 🧒 <b>Niños:</b> ${totalN}\n` +
+                `🏠 <b>Familias confirmadas:</b> ${confirmados.length}\n\n` +
+                `📋 <b>HISTORIAL DE RESPUESTAS:</b>\n` +
+                `<pre>${tableRows}</pre>`;
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
+            }).catch(e => console.error("Error al enviar notificación a Telegram:", e));
+        } catch (err) {
+            console.error("Error preparando notificación:", err);
+        }
+    }
 
 });
