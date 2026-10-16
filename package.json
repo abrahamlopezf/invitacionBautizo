@@ -4,7 +4,8 @@
   "scripts": {
     "start": "node bot_server.js",
     "build": "echo \"Static site ready\"",
-    "bot": "node bot_server.js"
+    "bot": "node bot_server.js",
+    "sync": "node sync_sheets.js"
   },
   "dependencies": {
     "firebase": "^12.19.0"

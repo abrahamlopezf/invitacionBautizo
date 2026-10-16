@@ -1,6 +1,7 @@
 const https = require('https');
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs } = require('firebase/firestore');
+const { syncFromGoogleSheets } = require('./sync_sheets');
 
 const firebaseConfig = {
   projectId: "invbacatherine",
@@ -121,6 +122,31 @@ function processMessage(msg) {
 
   const text = msg.text.toLowerCase().trim();
 
+  const isSync = text.includes('sincroni') || text === '/sincronizar' || text === '/sync';
+
+  if (isSync) {
+    sendTelegramMessage(chatId, "⏳ Consultando Google Sheets y sincronizando base de datos...");
+    syncFromGoogleSheets().then(changes => {
+      let reply = `✅ <b>Sincronización con Google Sheets completada</b>\n\n`;
+      if (changes.agregados.length > 0) {
+        reply += `✨ <b>Agregados (${changes.agregados.length}):</b>\n` + changes.agregados.map(a => `• ${a.nombre} (${a.qty} pases)`).join('\n') + `\n\n`;
+      }
+      if (changes.actualizados.length > 0) {
+        reply += `🔄 <b>Actualizados (${changes.actualizados.length}):</b>\n` + changes.actualizados.map(a => `• ${a.nombre} (${a.anterior} ➔ ${a.nuevo} pases)`).join('\n') + `\n\n`;
+      }
+      if (changes.eliminados.length > 0) {
+        reply += `🗑️ <b>Eliminados (${changes.eliminados.length}):</b>\n` + changes.eliminados.map(e => `• ${e}`).join('\n') + `\n\n`;
+      }
+      if (changes.agregados.length === 0 && changes.actualizados.length === 0 && changes.eliminados.length === 0) {
+        reply += `👌 Todo al día: no hubo cambios nuevos en el Excel (${changes.sinCambios} invitados activos).\n`;
+      }
+      sendTelegramMessage(chatId, reply);
+    }).catch(err => {
+      sendTelegramMessage(chatId, `❌ Error al sincronizar con Google Sheets: ${err.message}`);
+    });
+    return;
+  }
+
   const isQuery = text.includes('cuanto') ||
                   text.includes('confirmad') ||
                   text.includes('lista') ||
@@ -140,7 +166,7 @@ function processMessage(msg) {
       sendTelegramMessage(chatId, "⚠️ Hubo un error al consultar la base de datos.");
     });
   } else {
-    sendTelegramMessage(chatId, `👋 Hola Abraham. Puedes preguntarme:\n\n• <i>"¿Cuántos invitados hay confirmados?"</i>\n• <i>"Lista de confirmados"</i>\n• <i>"/resumen"</i>\n\ny te daré la lista en tabla con los totales actualizados en tiempo real.`);
+    sendTelegramMessage(chatId, `👋 Hola. Puedes preguntarme:\n\n• <i>"¿Cuántos invitados hay confirmados?"</i>\n• <i>"Lista de confirmados"</i>\n• <i>"/sincronizar"</i> (para actualizar desde el Excel de Google Drive)\n• <i>"/resumen"</i>\n\ny te responderé al instante.`);
   }
 }
 
@@ -182,6 +208,28 @@ http.createServer((req, res) => {
 }).listen(PORT, () => {
   console.log(`🌐 Servidor HTTP activo en puerto ${PORT}`);
 });
+
+// Auto-sincronización periódica cada 10 minutos
+setInterval(async () => {
+  try {
+    const changes = await syncFromGoogleSheets();
+    if (changes.agregados.length > 0 || changes.actualizados.length > 0 || changes.eliminados.length > 0) {
+      let alertMsg = `📢 <b>¡Cambios detectados y sincronizados desde Google Sheets!</b>\n\n`;
+      if (changes.agregados.length > 0) {
+        alertMsg += `✨ <b>Nuevos agregados:</b>\n` + changes.agregados.map(a => `• ${a.nombre} (${a.qty} pases)`).join('\n') + `\n\n`;
+      }
+      if (changes.actualizados.length > 0) {
+        alertMsg += `🔄 <b>Pases actualizados:</b>\n` + changes.actualizados.map(a => `• ${a.nombre} (${a.anterior} ➔ ${a.nuevo} pases)`).join('\n') + `\n\n`;
+      }
+      if (changes.eliminados.length > 0) {
+        alertMsg += `🗑️ <b>Eliminados:</b>\n` + changes.eliminados.map(e => `• ${e}`).join('\n') + `\n\n`;
+      }
+      AUTHORIZED_CHAT_IDS.forEach(id => sendTelegramMessage(id, alertMsg));
+    }
+  } catch (err) {
+    console.error("Error en auto-sincronización periódica:", err.message);
+  }
+}, 10 * 60 * 1000);
 
 console.log("🤖 Bot de Telegram activo y escuchando preguntas...");
 pollUpdates();
