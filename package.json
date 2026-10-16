@@ -2,7 +2,8 @@
   "name": "invitacion-bautizo",
   "version": "1.0.0",
   "scripts": {
-    "build": "echo \"Static site ready\""
+    "build": "echo \"Static site ready\"",
+    "bot": "node bot_server.js"
   },
   "dependencies": {
     "firebase": "^12.19.0"
