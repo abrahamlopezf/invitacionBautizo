@@ -479,79 +479,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 6. Notificación a Telegram con Historial y Totales
+    // 6. Notificación a Telegram enviada a través del backend seguro (sin exponer tokens)
     async function sendTelegramNotification(guestName, pasesMax, w, m, c, total) {
         try {
-            const botToken = "8634708926:AAGOfHeqn7JEpZAfmoRLgWxTJ157YveHIKw";
-            const chatIds = ["5215477099", "6299608285"]; // Abraham & Liz
-
-            // Obtener lista completa de confirmados para calcular totales y armar tabla
-            const snapshot = await db.collection('invitados').get();
-            let totalH = 0, totalM = 0, totalN = 0, totalA = 0;
-            const confirmados = [];
-
-            snapshot.forEach(docSnap => {
-                const d = docSnap.data();
-                if (d.nombre === 'LIZ PENA' && !d.estado) return;
-
-                const isCurrent = (docSnap.id === currentGuestId);
-                const hom = isCurrent ? m : (d.hombres || 0);
-                const muj = isCurrent ? w : (d.mujeres || 0);
-                const nin = isCurrent ? c : (d.ninos || 0);
-                const tot = isCurrent ? total : (d.total_asistiran !== undefined ? d.total_asistiran : (hom + muj + nin));
-                const st = isCurrent ? 'Confirmado' : d.estado;
-
-                if (st === 'Confirmado' || tot > 0 || (d.fecha_confirmacion && tot === 0)) {
-                    totalH += hom;
-                    totalM += muj;
-                    totalN += nin;
-                    totalA += tot;
-                    confirmados.push({
-                        nombre: d.nombre,
-                        pases: d.cantidad_considerada || 0,
-                        hombres: hom,
-                        mujeres: muj,
-                        ninos: nin,
-                        total: tot,
-                        noAsiste: (tot === 0)
-                    });
-                }
-            });
-
-            // Ordenar: primero los que tienen mayor número de asistentes y luego alfabético
-            confirmados.sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre));
-
-            const tableRows = confirmados.map(item => {
-                const namePadded = item.nombre.length > 17 ? item.nombre.substring(0, 16) + '…' : item.nombre.padEnd(17, ' ');
-                if (item.noAsiste) {
-                    return `${namePadded} [No asiste]`;
-                }
-                return `${namePadded} (${item.total}) [${item.hombres}H/${item.mujeres}M/${item.ninos}N]`;
-            }).join('\n');
-
-            const text = `🔔 <b>¡NUEVA CONFIRMACIÓN DE ASISTENCIA!</b>\n\n` +
-                `👤 <b>Invitado:</b> ${guestName}\n` +
-                `🎟️ <b>Pases considerados:</b> ${pasesMax}\n` +
-                `👥 <b>Asistirán:</b> ${total} persona(s)${total === 0 ? ' (Indicó que no asistirá)' : ''}\n` +
-                `👨 <b>Hombres:</b> ${m} | 👩 <b>Mujeres:</b> ${w} | 🧒 <b>Niños:</b> ${c}\n\n` +
-                `━━━━━━━━━━━━━━━━━━━\n` +
-                `📊 <b>TOTALES ACUMULADOS:</b>\n` +
-                `👥 <b>Total personas:</b> ${totalA}\n` +
-                `👨 <b>Hombres:</b> ${totalH} | 👩 <b>Mujeres:</b> ${totalM} | 🧒 <b>Niños:</b> ${totalN}\n` +
-                `🏠 <b>Familias confirmadas:</b> ${confirmados.length}\n\n` +
-                `📋 <b>HISTORIAL DE RESPUESTAS:</b>\n` +
-                `<pre>${tableRows}</pre>`;
-
-            chatIds.forEach(id => {
-                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: id,
-                        text: text,
-                        parse_mode: 'HTML'
-                    })
-                }).catch(e => console.error("Error al enviar notificación a Telegram:", e));
-            });
+            fetch('https://bot-bautizo.onrender.com/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    guestName: guestName,
+                    pasesMax: pasesMax,
+                    w: w,
+                    m: m,
+                    c: c,
+                    total: total
+                })
+            }).catch(e => console.warn("Aviso: Notificación enviada al servidor del bot:", e));
         } catch (err) {
             console.error("Error preparando notificación:", err);
         }

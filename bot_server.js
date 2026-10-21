@@ -16,12 +16,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const BOT_TOKEN = "8634708926:AAGOfHeqn7JEpZAfmoRLgWxTJ157YveHIKw";
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (!BOT_TOKEN) {
+  console.error("⚠️ ADVERTENCIA: TELEGRAM_BOT_TOKEN no está definido en variables de entorno.");
+}
 const AUTHORIZED_CHAT_IDS = ["5215477099", "6299608285"]; // Abraham Lopez & Liz Lopez
 
 let lastUpdateId = 0;
 
 function sendTelegramMessage(chatId, text) {
+  if (!BOT_TOKEN) {
+    console.warn("⚠️ sendTelegramMessage omitido: BOT_TOKEN no definido.");
+    return;
+  }
   const payload = JSON.stringify({
     chat_id: chatId,
     text: text,
@@ -171,6 +178,12 @@ function processMessage(msg) {
 }
 
 function pollUpdates() {
+  if (!BOT_TOKEN) {
+    console.warn("⚠️ pollUpdates en pausa: TELEGRAM_BOT_TOKEN no definido aún.");
+    setTimeout(pollUpdates, 5000);
+    return;
+  }
+
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`;
 
   https.get(url, (res) => {
@@ -190,7 +203,6 @@ function pollUpdates() {
       } catch (e) {
         console.error("Error parseando update:", e);
       }
-      // Siguiente ciclo de polling
       setTimeout(pollUpdates, 1000);
     });
   }).on('error', (err) => {
@@ -199,17 +211,73 @@ function pollUpdates() {
   });
 }
 
-// Servidor HTTP simple para mantener vivo el servicio en la nube (Render, Railway, etc.)
+// Servidor HTTP con soporte CORS y endpoint /api/notify para el frontend
 const http = require('http');
 const PORT = process.env.PORT || 8080;
+
 http.createServer((req, res) => {
+  // Encabezados CORS universales
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/notify') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 1e6) req.connection.destroy();
+    });
+
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body || '{}');
+        const { guestName, pasesMax, w, m, c, total } = data;
+
+        // Esperar brevemente para que Firestore complete su persistencia antes de generar el reporte
+        setTimeout(async () => {
+          try {
+            const report = await getConfirmationReport();
+            const text = `🔔 <b>¡NUEVA CONFIRMACIÓN DE ASISTENCIA!</b>\n\n` +
+              `👤 <b>Invitado:</b> ${guestName || 'Invitado'}\n` +
+              `🎟️ <b>Pases considerados:</b> ${pasesMax || 0}\n` +
+              `👥 <b>Asistirán:</b> ${total} persona(s)${total === 0 ? ' (Indicó que no asistirá)' : ''}\n` +
+              `👨 <b>Hombres:</b> ${m || 0} | 👩 <b>Mujeres:</b> ${w || 0} | 🧒 <b>Niños:</b> ${c || 0}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━\n\n` +
+              report;
+
+            AUTHORIZED_CHAT_IDS.forEach(id => {
+              sendTelegramMessage(id, text);
+            });
+          } catch (e) {
+            console.error("Error al procesar notificación de confirmación:", e);
+          }
+        }, 1200);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: 'Notificación recibida' }));
+      } catch (err) {
+        console.error("Error procesando body de /api/notify:", err);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // Endpoint de salud / status
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('🤖 Bot de Bautizo Catherine está activo 24/7.');
 }).listen(PORT, () => {
   console.log(`🌐 Servidor HTTP activo en puerto ${PORT}`);
 });
 
-// Auto-sincronización periódica cada 10 minutos
+// Auto-sincronización periódica con Google Sheets cada 10 minutos
 setInterval(async () => {
   try {
     const changes = await syncFromGoogleSheets();
@@ -230,6 +298,21 @@ setInterval(async () => {
     console.error("Error en auto-sincronización periódica:", err.message);
   }
 }, 10 * 60 * 1000);
+
+// Keep-Alive auto-ping para evitar que el contenedor gratuito de Render se suspenda (15 min inactividad)
+const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || 'https://bot-bautizo.onrender.com';
+setInterval(() => {
+  try {
+    const pingUrl = KEEP_ALIVE_URL.startsWith('http') ? `${KEEP_ALIVE_URL}/ping` : `https://${KEEP_ALIVE_URL}/ping`;
+    https.get(pingUrl, (res) => {
+      // Keep alive exitoso
+    }).on('error', (err) => {
+      // Ignorar errores transitorios durante deploys
+    });
+  } catch (err) {
+    // Silencioso
+  }
+}, 8 * 60 * 1000); // Cada 8 minutos
 
 console.log("🤖 Bot de Telegram activo y escuchando preguntas...");
 pollUpdates();
