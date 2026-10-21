@@ -828,51 +828,157 @@ p {
     transform: scale(1.3);
 }
 
-/* Mesa de Regalos */
+/* Mesas de Regalos */
 .gifts-section {
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 15px;
-    padding: 40px 20px;
-    margin: 20px auto;
-    max-width: 90%;
-    box-shadow: 0 4px 15px rgba(233, 30, 99, 0.05);
-    border: 1px solid rgba(248, 187, 208, 0.5);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
+    padding: 35px 20px;
+    margin: 25px auto;
+    max-width: 92%;
+    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.07);
+    border: 1px solid rgba(248, 187, 208, 0.6);
     text-align: center;
 }
 
 .gift-icon {
     color: var(--accent-color);
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     animation: bounce 3s infinite;
 }
 
 @keyframes bounce {
     0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-    40% {transform: translateY(-10px);}
-    60% {transform: translateY(-5px);}
+    40% {transform: translateY(-8px);}
+    60% {transform: translateY(-4px);}
 }
 
-.gift-btn {
+.gifts-description {
+    font-size: 0.92rem;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 22px;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.gifts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.gift-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 22px 16px;
+    border: 1.5px solid rgba(248, 187, 208, 0.6);
+    text-decoration: none;
+    color: var(--text-main);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.gift-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(233, 30, 99, 0.15);
+    border-color: var(--accent-color);
+}
+
+.gift-card-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    transition: transform 0.3s ease;
+}
+
+.gift-card:hover .gift-card-icon-wrap {
+    transform: scale(1.1);
+}
+
+.gift-card.gift-liverpool .gift-card-icon-wrap {
+    background: #FCE4EC;
+    color: #E91E63;
+}
+
+.gift-card.gift-amazon .gift-card-icon-wrap {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.gift-card-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #222222;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.gift-card-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    margin-bottom: 16px;
+    line-height: 1.35;
+}
+
+.gift-card-subtitle strong {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+.gift-card-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    background: transparent;
-    color: var(--accent-color);
-    padding: 12px 25px;
-    border-radius: 30px;
-    text-decoration: none;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 25px;
+    font-size: 0.88rem;
     font-weight: 600;
-    font-size: 1rem;
-    border: 2px solid var(--accent-color);
+    letter-spacing: 0.5px;
     transition: all 0.3s ease;
+    border: none;
 }
 
-.gift-btn:hover {
-    background: var(--accent-color);
-    color: white;
-    transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3);
+.gift-card.gift-liverpool .gift-card-btn {
+    background: #E91E63;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.25);
+}
+
+.gift-card.gift-liverpool:hover .gift-card-btn {
+    background: #D81B60;
+    box-shadow: 0 6px 16px rgba(233, 30, 99, 0.35);
+}
+
+.gift-card.gift-amazon .gift-card-btn {
+    background: #232F3E;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(35, 47, 62, 0.25);
+}
+
+.gift-card.gift-amazon:hover .gift-card-btn {
+    background: #131921;
+    box-shadow: 0 6px 16px rgba(35, 47, 62, 0.35);
+}
+
+.gift-card.gift-amazon .gift-card-btn svg {
+    color: #FF9900;
 }
 
 /* Falling Petals */
@@ -923,5 +1029,10 @@ p {
     
     .location-section.with-image .location-image img {
         height: 180px;
+    }
+
+    .gifts-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
     }
 }
